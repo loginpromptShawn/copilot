@@ -1,11 +1,15 @@
-import argparse
 import sys
+
+if __name__ != "__main__":
+    sys.modules.pop("copilot_app.cli.cli", None)
+
+import argparse
 import asyncio
 
-from ..core.app import App
-from ..core.errors import CommandNotFoundError
-from ..core.async_router import AsyncRouter
-from .commands import COMMANDS
+from copilot_app.core.errors import CommandNotFoundError
+from copilot_app.core.async_router import AsyncRouter
+from copilot_app.cli.bootstrap import load_cli_environment
+from copilot_app.cli.registry import CommandRegistry
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -19,14 +23,29 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
+
 def main(argv=None) -> int:
-    app = App()
+    # --- QUIET FLAG HANDLING (must come first) ---
+    quiet = False
+    if argv and "--quiet" in argv:
+        quiet = True
+        argv = [a for a in argv if a != "--quiet"]
+    # ------------------------------------------------
+
     parser = create_parser()
     args = parser.parse_args(argv)
 
     if args.version:
         print("copilot 0.1.0 (macOS modular CLI)")
         return 0
+
+    # Now that we know logging level, boot the app
+    app = load_cli_environment(quiet=quiet)
+
+
+
+    CommandRegistry.initialize()
+    CommandRegistry.populate_default_commands()
 
     if args.command is None:
         parser.print_help()
@@ -35,13 +54,15 @@ def main(argv=None) -> int:
     command = args.command
     raw_args = args.args or []
     cmd_args = [arg for arg in raw_args if arg != "--"]
-    cmd_obj = next((c for c in COMMANDS if c.name == command), None)
+    cmd_obj = CommandRegistry.get(command)
     if cmd_obj is None:
         print(f"Unknown command: {command}")
         return 1
 
     if getattr(cmd_obj, "is_async", False):
-        result = asyncio.run(AsyncRouter().run_command(command, *cmd_args, app_context=app.app_context))
+        result = asyncio.run(
+            AsyncRouter().run_command(command, *cmd_args, app_context=app.app_context)
+        )
         print(result)
         return 0
 

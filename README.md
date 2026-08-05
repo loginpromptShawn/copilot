@@ -64,11 +64,14 @@ Plugins are loaded automatically at application startup and activated with an `a
 This project includes optional async/await support.
 
 - Async app entrypoint: `src/copilot_app/core/async_app.py` provides `AsyncApp` with `init()` and `run()` methods.
-- Async router: `src/copilot_app/core/async_router.py` dispatches async commands.
+- Async router: `src/copilot_app/core/async_router.py` dispatches async commands and forwards `app_context` to handlers.
+- Unified async command handler signature: `async def handler_name(*args, app_context=None)`.
+- Async CLI handlers must accept `app_context` so `AsyncRouter` can dispatch context-aware commands.
 - To run async commands from CLI, use the `async-greet` and `async-sysinfo` commands. Example:
 
 ```bash
-python3 src/copilot_app/cli/cli.py async-greet Shawn
+cd src
+python3 -m copilot_app.cli.cli async-greet Shawn
 ```
 
 Async services live in `src/copilot_app/services/` as `async_user_service.py` and `async_system_service.py`.

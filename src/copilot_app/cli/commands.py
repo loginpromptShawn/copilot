@@ -1,4 +1,5 @@
 from typing import Callable, Any
+import inspect
 import logging
 
 from ..auth.cli_auth import login, register_user, whoami
@@ -283,5 +284,13 @@ COMMANDS = [
     Command("circuit-status", "Print circuit breaker states", _circuit_status),
     Command("circuit-test", "Run a circuit breaker failure test", _circuit_test),
 ]
+
+for command in COMMANDS:
+    if command.is_async:
+        signature = inspect.signature(command.handler)
+        if "app_context" not in signature.parameters:
+            raise RuntimeError(
+                f"Async command '{command.name}' handler '{command.handler.__name__}' must accept app_context"
+            )
 
 logging.getLogger(__name__).debug("Registered commands: %s", [c.name for c in COMMANDS])

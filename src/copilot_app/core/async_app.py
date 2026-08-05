@@ -7,6 +7,7 @@ from typing import Any
 from ..utils.config import get_config
 from ..utils.logging_setup import init_logging
 from ..persistence.database import init_db
+from ..auth.service import AuthService
 from .router import run_command
 from ..plugins.plugin_manager import PluginManager
 
@@ -20,7 +21,13 @@ class AsyncApp:
         init_db()
         self.config = get_config()
         self.plugin_manager = PluginManager()
-        self.app_context: dict[str, Any] = {"app": self, "config": self.config, "plugin_manager": self.plugin_manager}
+        self.auth_service = AuthService()
+        self.app_context: dict[str, Any] = {
+            "app": self,
+            "config": self.config,
+            "plugin_manager": self.plugin_manager,
+            "auth_service": self.auth_service,
+        }
 
     async def init(self) -> None:
         # load plugins synchronously, then activate asynchronously

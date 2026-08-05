@@ -3,6 +3,7 @@ import logging
 from ..utils.config import get_config
 from ..utils.logging_setup import init_logging
 from ..persistence.database import init_db
+from ..auth.service import AuthService
 from .router import run_command
 from ..plugins.plugin_manager import PluginManager
 from ..scheduler.scheduler import BackgroundScheduler
@@ -51,12 +52,14 @@ class App:
         self.scheduler.start()
 
         # app_context passed to plugins; plugins can access the app, config, plugin_manager and scheduler
+        self.auth_service = AuthService()
         self.app_context = {
             "app": self,
             "config": self.config,
             "plugin_manager": self.plugin_manager,
             "scheduler": self.scheduler,
             "metrics_registry": self.metrics_registry,
+            "auth_service": self.auth_service,
         }
         self.plugin_manager.activate_all(self.app_context)
 

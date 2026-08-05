@@ -139,6 +139,51 @@ To inspect the database on macOS, you can run:
 sqlite3 /Users/bong/VSCode/copilot/copilot.db 
 ```
 
+## Authentication
+
+A new authentication module lives under `src/copilot_app/auth`.
+
+- `auth/models.py` defines `AuthUser` and `AuthSession` dataclasses.
+- `auth/tokens.py` provides secure token generation, password hashing, verification, and expiry utilities.
+- `auth/service.py` exposes `AuthService` with `register_user()`, `authenticate()`, `validate_token()`, and `revoke_session()`.
+- `auth/middleware.py` adds FastAPI token validation and attaches the authenticated user to `request.state.user`.
+- `auth/cli_auth.py` adds CLI helpers for `register-user`, `login`, and `whoami`.
+
+### Auth API endpoints
+
+- `POST /auth/register` — register a new user with `username` and `password`.
+- `POST /auth/login` — authenticate and receive a bearer token.
+- `GET /auth/me` — return the current authenticated user.
+
+### Protected endpoints
+
+The following routes require a valid bearer token in `Authorization: Bearer <token>` or `token` header:
+
+- `GET /users`
+- `POST /users`
+- `GET /system-info`
+- `POST /system-info`
+
+Unauthorized access returns HTTP `401` with JSON:
+
+```json
+{"detail": "Unauthorized"}
+```
+
+### CLI auth usage
+
+```bash
+python3 src/copilot_app/cli.py register-user alice
+python3 src/copilot_app/cli.py login alice
+python3 src/copilot_app/cli.py whoami <token>
+```
+
+### macOS-specific notes
+
+- Password prompts use `getpass.getpass()` for secure terminal input without echo.
+- No plaintext passwords are logged; only authentication events are recorded.
+- For local development, use bearer tokens from `/auth/login` to access protected endpoints.
+
 ## Distributed Tracing
 
 This project includes a lightweight distributed tracing system under `src/copilot_app/tracing`.
@@ -189,6 +234,47 @@ macOS notes:
 
 - The implementation uses thread-safe locks and `time.time()` for timestamps, suitable for the single-process CLI and FastAPI server on macOS.
 - For distributed or multi-process rate limiting across machines, replace the per-instance strategies with a shared backend (Redis, etc.).
+
+## Resilience
+
+This project now includes retry and bulkhead isolation support under `src/copilot_app/resilience`.
+
+- `retry.py` defines `RetryPolicy` and `RetryExecutor` with fixed, exponential, and jitter backoff strategies.
+- `bulkhead.py` defines a `Bulkhead` limiter with concurrent call limits and a request queue.
+- `integration.py` provides `resilient_call()` that applies rate limiting, circuit breaker checks, bulkhead isolation, and retries.
+
+### Retry strategies
+
+- `fixed`: waits the same `base_delay` between retries.
+- `exponential`: waits `base_delay * 2**attempt` between retries.
+- `jitter`: adds random variance to exponential backoff.
+
+Retry policies are configured per service in `config.ini`.
+
+### Bulkhead isolation
+
+Bulkheads prevent a service from being overwhelmed by limiting concurrent calls and queueing a bounded number of requests.
+
+- `max_concurrent` controls active requests.
+- `queue_size` controls how many extra requests wait.
+- Requests beyond those limits are rejected with a bulkhead error.
+
+### Interaction with circuit breakers and rate limiting
+
+- `resilient_call()` checks the global rate limiter before acquiring a bulkhead or retrying.
+- If a circuit breaker is open, the call fails fast and does not retry.
+- Bulkhead rejection is surfaced clearly in CLI and API error messages.
+
+### Mesh integration
+
+- `MeshRouter` now routes service calls through `resilient_call()`.
+- `user_service` and `system_service` mesh variants also use resilience support.
+
+### macOS considerations
+
+- Bulkhead uses `threading.Semaphore` and `threading.Thread`, which is appropriate for local macOS development.
+- Jitter and retry delays should be tuned lower for interactive local testing.
+- Avoid retry storms by keeping rate limiting ahead of bulkhead/retry logic.
 
 
 ## Circuit Breaker System

@@ -31,4 +31,6 @@ def greet_user(name: str) -> str:
 
 
 def greet_user_mesh(name: str) -> str:
-    return wrap_service_call("user-service", "greet_user", greet_user, name)
+    from ..resilience.integration import resilient_call
+
+    return resilient_call("user-service", "greet_user", greet_user, name)

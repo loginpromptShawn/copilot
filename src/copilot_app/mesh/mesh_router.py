@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 
 from .mesh_node import MeshNode
 from .mesh_observability import record_mesh_call, record_mesh_error
-from ..circuit_breaker.integration import wrap_service_call
+from ..resilience.integration import resilient_call
 from ..tracing.tracer import global_tracer
 
 logger = logging.getLogger(__name__)
@@ -44,10 +44,10 @@ class MeshRouter:
                 raise RuntimeError(f"No available nodes for {service_name}")
             if operation == "greet_user":
                 from ..services.user_service import greet_user
-                return wrap_service_call("user-service", operation, greet_user, *args, **kwargs)
+                return resilient_call("user-service", operation, greet_user, *args, **kwargs)
             if operation == "get_system_info":
                 from ..services.system_service import get_system_info
-                return wrap_service_call("system-service", operation, get_system_info, *args, **kwargs)
+                return resilient_call("system-service", operation, get_system_info, *args, **kwargs)
             raise RuntimeError(f"Unknown operation: {operation}")
         except Exception as exc:
             record_mesh_error(service_name, type(exc).__name__)
@@ -78,10 +78,10 @@ class MeshRouter:
                 raise RuntimeError(f"Node not found: {node_id}")
             if operation == "greet_user":
                 from ..services.user_service import greet_user_mesh
-                return wrap_service_call("user-service", operation, greet_user_mesh, *args, **kwargs)
+                return resilient_call("user-service", operation, greet_user_mesh, *args, **kwargs)
             if operation == "get_system_info":
                 from ..services.system_service import get_system_info_mesh
-                return wrap_service_call("system-service", operation, get_system_info_mesh, *args, **kwargs)
+                return resilient_call("system-service", operation, get_system_info_mesh, *args, **kwargs)
             raise RuntimeError(f"Unknown operation: {operation}")
         except Exception as exc:
             record_mesh_error(node_id, type(exc).__name__)

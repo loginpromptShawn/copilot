@@ -11,18 +11,33 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
-def init_db() -> None:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = get_connection()
-    cur = conn.cursor()
+def _ensure_users_schema(cur: sqlite3.Cursor) -> None:
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL
+            name TEXT NOT NULL,
+            username TEXT UNIQUE,
+            password_hash TEXT,
+            is_active INTEGER DEFAULT 1
         )
         """
     )
+    cur.execute("PRAGMA table_info(users)")
+    existing_columns = {row[1] for row in cur.fetchall()}
+    if "username" not in existing_columns:
+        cur.execute("ALTER TABLE users ADD COLUMN username TEXT")
+    if "password_hash" not in existing_columns:
+        cur.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
+    if "is_active" not in existing_columns:
+        cur.execute("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1")
+
+
+def init_db() -> None:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = get_connection()
+    cur = conn.cursor()
+    _ensure_users_schema(cur)
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS system_info (
@@ -30,6 +45,18 @@ def init_db() -> None:
             os TEXT,
             version TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS auth_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token TEXT NOT NULL UNIQUE,
+            created_at REAL NOT NULL,
+            expires_at REAL NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
         """
     )

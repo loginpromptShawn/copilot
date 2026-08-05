@@ -21,3 +21,11 @@ class CircuitOpenError(AppError):
     def __init__(self, service_name: str):
         super().__init__(f"Circuit is open for: {service_name}")
         self.service_name = service_name
+
+
+class BulkheadRejectedError(AppError):
+    """Raised when a bulkhead rejects an incoming request."""
+
+    def __init__(self, service_name: str):
+        super().__init__(f"Bulkhead rejected call for: {service_name}")
+        self.service_name = service_name

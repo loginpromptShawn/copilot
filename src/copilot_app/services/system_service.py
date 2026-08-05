@@ -38,4 +38,6 @@ def get_system_info() -> str:
 
 
 def get_system_info_mesh() -> str:
-    return wrap_service_call("system-service", "get_system_info", get_system_info)
+    from ..resilience.integration import resilient_call
+
+    return resilient_call("system-service", "get_system_info", get_system_info)

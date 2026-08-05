@@ -1,6 +1,7 @@
 from typing import Callable, Any
 import logging
 
+from ..auth.cli_auth import login, register_user, whoami
 from ..mesh.mesh_router import MeshRouter
 from ..services.system_service import get_system_info
 from ..services.user_service import greet_user
@@ -184,6 +185,63 @@ def _circuit_status(app_context: dict | None = None) -> str:
         return f"Error fetching circuit status: {exc}"
 
 
+def _resilience_status(app_context: dict | None = None) -> str:
+    try:
+        from ..resilience.integration import get_retry_policy, get_bulkhead
+
+        services = ["user_service", "system_service"]
+        lines = []
+        for service in services:
+            policy = get_retry_policy(service)
+            bulkhead = get_bulkhead(service)
+            lines.append(
+                f"{service}: attempts={policy.max_attempts}, strategy={policy.backoff_strategy}, "
+                f"delay={policy.base_delay}-{policy.max_delay}, "
+                f"concurrency={bulkhead.max_concurrent}, queue={bulkhead.queue_size}"
+            )
+        return "\n".join(lines)
+    except Exception as exc:
+        return f"Error fetching resilience status: {exc}"
+
+
+def _resilience_test(service: str, app_context: dict | None = None) -> str:
+    try:
+        import threading
+        from ..resilience.integration import get_bulkhead, resilient_call
+
+        if service not in ("user-service", "system-service"):
+            return f"Unsupported service: {service}"
+
+        bulkhead = get_bulkhead(service.replace("-", "_"))
+        results: list[str] = []
+
+        def work(index: int) -> None:
+            def operation() -> str:
+                if index % 2 == 0:
+                    raise RuntimeError("transient failure")
+                return f"success-{index}"
+
+            try:
+                value = resilient_call(service, f"test-{index}", operation)
+                results.append(f"{index}: {value}")
+            except Exception as exc:
+                results.append(f"{index}: failed-{type(exc).__name__}")
+
+        threads = []
+        count = bulkhead.max_concurrent + bulkhead.queue_size + 2
+        for i in range(count):
+            thread = threading.Thread(target=work, args=(i,), daemon=True)
+            thread.start()
+            threads.append(thread)
+
+        for thread in threads:
+            thread.join()
+
+        return "\n".join(results)
+    except Exception as exc:
+        return f"Error running resilience test: {exc}"
+
+
 def _circuit_test(service: str, app_context: dict | None = None) -> str:
     try:
         from ..circuit_breaker.integration import get_breaker_for_service
@@ -216,6 +274,11 @@ COMMANDS = [
     Command("traces", "Print collected tracing data", _print_traces),
     Command("rate-limit-test", "Run a CLI rate limit test", _rate_limit_test),
     Command("mesh-status", "List registered mesh nodes", _mesh_status),
+    Command("register-user", "Register a new auth user", register_user),
+    Command("login", "Authenticate and get a token", login),
+    Command("whoami", "Print user info for a token", whoami),
+    Command("resilience-status", "Print resilience policy and bulkhead settings", _resilience_status),
+    Command("resilience-test", "Run resilience retry/bulkhead tests", _resilience_test),
     Command("mesh-call", "Perform a simulated mesh call", _mesh_call),
     Command("circuit-status", "Print circuit breaker states", _circuit_status),
     Command("circuit-test", "Run a circuit breaker failure test", _circuit_test),

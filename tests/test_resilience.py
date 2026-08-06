@@ -106,6 +106,7 @@ def test_circuit_open_skips_retries():
 def test_mesh_router_uses_resilience():
     from copilot_app.mesh.mesh_router import MeshRouter
 
+    reset_breakers()
     router = MeshRouter()
     assert router is not None
 

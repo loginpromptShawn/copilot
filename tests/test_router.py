@@ -2,6 +2,13 @@ import pytest
 
 from copilot_app.core.router import run_command
 from copilot_app.core.errors import CommandNotFoundError
+from copilot_app.persistence.database import init_db
+
+
+@pytest.fixture(autouse=True)
+def setup_db():
+    init_db()
+    yield
 
 
 def test_run_command_greet():

@@ -3,10 +3,16 @@ name = "copilot"
 version = "0.1.0"
 description = "A modern Python project layout for a Copilot-style app."
 authors = [
-  { name = "Your Name", email = "you@example.com" }
+  { name = "Shawn Smith", email = "loginprompt@yahoo.com" }
 ]
 readme = "README.md"
 requires-python = ">=3.11"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest]
 addopts = ["-q"]

@@ -35,11 +35,15 @@ class PluginManager:
         for p in self._iter_plugin_files():
             try:
                 name = p.stem
-                spec = importlib.util.spec_from_file_location(name, str(p))
+                # Load as part of the installed package so relative imports work
+                package_name = "copilot_app.plugins.installed"
+                module_name = f"{package_name}.{name}"
+                spec = importlib.util.spec_from_file_location(module_name, str(p))
                 if spec is None or spec.loader is None:
                     logger.warning("Could not load plugin spec: %s", p)
                     continue
                 mod = importlib.util.module_from_spec(spec)
+                mod.__package__ = package_name
                 loader = spec.loader
                 assert loader is not None
                 loader.exec_module(mod)  # type: ignore[arg-type]

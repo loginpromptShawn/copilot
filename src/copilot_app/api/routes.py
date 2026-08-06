@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel
-from ..metrics.exporters import fastapi_app as metrics_app
+from ..metrics.exporters import metrics_endpoint
 from ..tracing.exporters import router as traces_router
 from ..tracing.tracer import global_tracer
 from ..rate_limit.middleware import RateLimitMiddleware
@@ -98,8 +98,8 @@ async def save_system_info(payload: CreateSystemInfoRequest, user=Depends(get_cu
     return {"id": info.id, "os": info.os, "version": info.version}
 
 
-# mount metrics endpoint app
-app.mount("/metrics", metrics_app)
+# metrics endpoint
+app.get("/metrics")(metrics_endpoint)
 
 # include tracing routes if available
 if traces_router is not None:

@@ -1,8 +1,4 @@
 import sys
-
-if __name__ != "__main__":
-    sys.modules.pop("copilot_app.cli.cli", None)
-
 import argparse
 import asyncio
 
@@ -36,7 +32,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     if args.version:
-        print("copilot 0.1.0 (macOS modular CLI)")
+        print("copilot 0.1.0 (macOS CLI)")
         return 0
 
     # Now that we know logging level, boot the app

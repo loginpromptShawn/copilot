@@ -5,7 +5,7 @@ import logging
 from contextlib import contextmanager
 from typing import Callable, Optional
 
-from .tracer import global_tracer
+from . import tracer as tracer_module
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ def trace_function(name: Optional[str] = None):
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            tracer = global_tracer
+            tracer = tracer_module.global_tracer
             span = None
             if tracer is not None:
                 try:
@@ -39,7 +39,7 @@ def trace_function(name: Optional[str] = None):
 
 @contextmanager
 def trace_block(name: str):
-    tracer = global_tracer
+    tracer = tracer_module.global_tracer
     span = None
     if tracer is not None:
         span = tracer.start_span(name)

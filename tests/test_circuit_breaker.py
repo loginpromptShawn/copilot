@@ -40,7 +40,7 @@ def test_open_to_half_open_after_timeout():
 
 
 def test_half_open_success_to_closed():
-    breaker = CircuitBreaker(policy=CircuitPolicy(failure_threshold=1, recovery_timeout=0.1, half_open_max_calls=2))
+    breaker = CircuitBreaker(policy=CircuitPolicy(failure_threshold=1, recovery_timeout=0.1, half_open_max_calls=1))
 
     def failing():
         raise RuntimeError("failure")
@@ -51,6 +51,7 @@ def test_half_open_success_to_closed():
     with pytest.raises(RuntimeError):
         breaker.call(failing)
     time.sleep(0.15)
+    assert breaker.can_pass() is True
     assert breaker.state == CircuitState.HALF_OPEN
 
     assert breaker.call(success) == "ok"
@@ -66,6 +67,7 @@ def test_half_open_failure_returns_open():
     with pytest.raises(RuntimeError):
         breaker.call(failing)
     time.sleep(0.15)
+    assert breaker.can_pass() is True
     assert breaker.state == CircuitState.HALF_OPEN
 
     with pytest.raises(RuntimeError):
@@ -93,6 +95,7 @@ def test_get_breaker_for_service_registry():
 def test_circuit_open_error_raised_when_blocked():
     breaker = get_breaker_for_service("test-service")
     breaker.policy.failure_threshold = 1
+    breaker.policy.recovery_timeout = 0.1
 
     def failing():
         raise RuntimeError("failure")

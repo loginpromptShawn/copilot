@@ -1,0 +1,15 @@
+{
+  "trace_id": "b87b7882-eeca-4bcc-b6b3-3cf891ac0f6f",
+  "spans": [
+    {
+      "trace_id": "b87b7882-eeca-4bcc-b6b3-3cf891ac0f6f",
+      "span_id": "19805efb-205d-4043-a0be-ffbf7e3aadc9",
+      "parent_id": null,
+      "name": "export-test",
+      "start_time": 1785999631.303236,
+      "end_time": 1785999631.303238,
+      "duration": 1.9073486328125e-06,
+      "attributes": {}
+    }
+  ]
+}

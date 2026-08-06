@@ -258,12 +258,16 @@ def _circuit_test(service: str, app_context: dict | None = None) -> str:
     except Exception as exc:
         return f"Error running circuit test: {exc}"
 
+def _list_commands(app_context: dict | None = None) -> str:
+    return "\n".join([cmd.name for cmd in COMMANDS])
+
 
 COMMANDS = [
     Command("greet", "Print a macOS greeting", greet_user),
     Command("sysinfo", "Print macOS system information", get_system_info),
     Command("plugins", "List loaded plugins", _list_plugins),
     Command("plugin-info", "Show plugin metadata by name", _plugin_info),
+    Command("list-commands", "List all available CLI commands", _list_commands),
     # async variants
     Command("async-greet", "Print a macOS greeting (async)", async_greet_user, is_async=True),
     Command("async-sysinfo", "Print system information (async)", async_get_system_info, is_async=True),

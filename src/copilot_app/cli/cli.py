@@ -42,8 +42,6 @@ def main(argv=None) -> int:
     # Now that we know logging level, boot the app
     app = load_cli_environment(quiet=quiet)
 
-
-
     CommandRegistry.initialize()
     CommandRegistry.populate_default_commands()
 

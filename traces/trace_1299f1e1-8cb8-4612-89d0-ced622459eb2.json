@@ -1,0 +1,15 @@
+{
+  "trace_id": "1299f1e1-8cb8-4612-89d0-ced622459eb2",
+  "spans": [
+    {
+      "trace_id": "1299f1e1-8cb8-4612-89d0-ced622459eb2",
+      "span_id": "32e2b75f-ff4a-4fb2-9ffb-f5f515f29d3e",
+      "parent_id": null,
+      "name": "export-test",
+      "start_time": 1785999584.822047,
+      "end_time": 1785999584.8220491,
+      "duration": 2.1457672119140625e-06,
+      "attributes": {}
+    }
+  ]
+}

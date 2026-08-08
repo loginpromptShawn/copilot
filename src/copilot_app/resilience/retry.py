@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Tuple
 
-from ..tracing.tracer import global_tracer
+from ..tracing import tracer as tracer_module
 from ..tracing.span import Span
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class RetryExecutor:
         time.sleep(delay)
 
     def execute(self, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
-        tracer = global_tracer
+        tracer = tracer_module.global_tracer
         policy = self.policy
         last_exception: BaseException | None = None
 

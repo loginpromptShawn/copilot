@@ -27,6 +27,15 @@ from ..mesh.mesh_router import MeshRouter
 from ..mesh.mesh_node import MeshNode
 
 
+def _set_global(module_name: str, attr: str, value: object) -> None:
+    try:
+        import importlib
+        mod = importlib.import_module(module_name)
+        setattr(mod, attr, value)
+    except Exception:
+        pass
+
+
 class App:
     def __init__(self) -> None:
         init_logging()
@@ -39,13 +48,7 @@ class App:
 
         # initialize metrics registry and set global reference
         self.metrics_registry = MetricsRegistry()
-        try:
-            import importlib
-
-            mr_mod = importlib.import_module("copilot_app.metrics.metrics_registry")
-            mr_mod.global_metrics_registry = self.metrics_registry
-        except Exception:
-            pass
+        _set_global("copilot_app.metrics.metrics_registry", "global_metrics_registry", self.metrics_registry)
 
         # initialize background scheduler
         self.scheduler = BackgroundScheduler()
@@ -73,52 +76,36 @@ class App:
         self.event_bus.subscribe(SystemInfoUpdatedEvent, handle_system_info_updated)
         self.event_bus.subscribe(LogCleanupEvent, handle_log_cleanup)
         # set global reference for modules that don't receive app_context
-        global_event_bus = globals().get("global_event_bus")
-        try:
-            # override module-level global_event_bus
-            import importlib
-
-            eb_mod = importlib.import_module("copilot_app.events.event_bus")
-            eb_mod.global_event_bus = self.event_bus
-        except Exception:
-            # fallback: ignore
-            pass
+        _set_global("copilot_app.events.event_bus", "global_event_bus", self.event_bus)
 
         # initialize DistributedEventBus with in-memory transport and set global
         self.distributed_event_bus = DistributedEventBus(local_bus=self.event_bus, transport=InMemoryTransport())
-        try:
-            de_mod = importlib.import_module("copilot_app.events.distributed.distributed_event_bus")
-            de_mod.global_distributed_bus = self.distributed_event_bus
-        except Exception:
-            pass
+        _set_global("copilot_app.events.distributed.distributed_event_bus", "global_distributed_bus", self.distributed_event_bus)
 
         # initialize tracer and exporter
         self.tracer = Tracer()
-        try:
-            tr_mod = importlib.import_module("copilot_app.tracing.tracer")
-            tr_mod.global_tracer = self.tracer
-        except Exception:
-            pass
+        _set_global("copilot_app.tracing.tracer", "global_tracer", self.tracer)
         self.trace_exporter = TraceExporter(self.tracer)
         self.app_context.update({"tracer": self.tracer, "trace_exporter": self.trace_exporter})
 
-        # initialize rate limiter with a TokenBucketStrategy by default
-        self.rate_limiter = RateLimiter(strategy=rl_strategies.TokenBucketStrategy(capacity=100, refill_rate=10))
-        try:
-            rl_mod = importlib.import_module("copilot_app.rate_limit.rate_limiter")
-            rl_mod.global_rate_limiter = self.rate_limiter
-        except Exception:
-            pass
+        # initialize rate limiter from config
+        strategy_name = self.config.get("rate_limit", "strategy", fallback="token_bucket")
+        capacity = self.config.getint("rate_limit", "capacity", fallback=100)
+        refill_rate = self.config.getfloat("rate_limit", "refill_rate", fallback=10)
+        if strategy_name == "fixed_window":
+            strategy = rl_strategies.FixedWindowStrategy(window_size=60, max_requests=capacity)
+        elif strategy_name == "sliding_window":
+            strategy = rl_strategies.SlidingWindowStrategy(window_size=60, max_requests=capacity)
+        else:
+            strategy = rl_strategies.TokenBucketStrategy(capacity=capacity, refill_rate=refill_rate)
+        self.rate_limiter = RateLimiter(strategy=strategy)
+        _set_global("copilot_app.rate_limit.rate_limiter", "global_rate_limiter", self.rate_limiter)
         self.app_context.update({"rate_limiter": self.rate_limiter})
 
         # initialize mesh control plane and router
         self.mesh_control_plane = MeshControlPlane()
         self.mesh_router = MeshRouter()
-        try:
-            mc_mod = importlib.import_module("copilot_app.mesh.mesh_control_plane")
-            mc_mod.global_mesh_control_plane = self.mesh_control_plane
-        except Exception:
-            pass
+        _set_global("copilot_app.mesh.mesh_control_plane", "global_mesh_control_plane", self.mesh_control_plane)
         self.app_context.update({"mesh_control_plane": self.mesh_control_plane, "mesh_router": self.mesh_router})
 
         self.mesh_control_plane.register_node(MeshNode("user-service-01", "user-service", "127.0.0.1:9001", {"role": "backend"}))

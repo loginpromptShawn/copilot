@@ -3,12 +3,17 @@ from __future__ import annotations
 from ..metrics.metrics_registry import global_metrics_registry
 import importlib
 
+_tracer_module = None
+
 
 def _get_tracer():
-    try:
-        return importlib.import_module("copilot_app.tracing.tracer").global_tracer
-    except Exception:
-        return None
+    global _tracer_module
+    if _tracer_module is None:
+        try:
+            _tracer_module = importlib.import_module("copilot_app.tracing.tracer")
+        except Exception:
+            return None
+    return getattr(_tracer_module, "global_tracer", None)
 
 
 def record_mesh_call(service_name: str, latency: float) -> None:

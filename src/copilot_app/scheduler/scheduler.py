@@ -30,8 +30,9 @@ class BackgroundScheduler:
                 (default_jobs.run_metrics_collection, 60.0),
             ]
 
-        # track last run times
-        self._last_run = {id(job): 0.0 for job, _ in self.jobs}
+        # track last run times and running state using job name for stable keys
+        self._last_run = {getattr(job, "__name__", str(job)): 0.0 for job, _ in self.jobs}
+        self._running = {getattr(job, "__name__", str(job)): False for job, _ in self.jobs}
 
     def _run_loop(self) -> None:
         logger.info("BackgroundScheduler started")
@@ -40,11 +41,12 @@ class BackgroundScheduler:
             while not self._stop_event.is_set():
                 now = time.time()
                 for job, interval in self.jobs:
-                    key = id(job)
+                    key = getattr(job, "__name__", str(job))
                     last = self._last_run.get(key, 0.0)
-                    if now - last >= interval:
+                    if now - last >= interval and not self._running.get(key, False):
                         try:
-                            threading.Thread(target=job, daemon=True).start()
+                            self._running[key] = True
+                            threading.Thread(target=self._run_job, args=(job, key), daemon=True).start()
                             self._last_run[key] = now
                             logger.info("Scheduled job %s executed", getattr(job, "__name__", str(job)))
                         except Exception:
@@ -54,6 +56,13 @@ class BackgroundScheduler:
         finally:
             self.is_running = False
             logger.info("BackgroundScheduler stopped")
+
+    def _run_job(self, job: Callable[[], None], key: str) -> None:
+        try:
+            job()
+        finally:
+            with self._lock:
+                self._running[key] = False
 
     def start(self) -> None:
         with self._lock:

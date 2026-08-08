@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, fail_closed: bool = False) -> None:
+        super().__init__(app)
+        self.fail_closed = fail_closed
+
     async def dispatch(self, request: Request, call_next):
         rl = rl_module.global_rate_limiter
         identifier = request.client.host if request.client else "anon"
@@ -20,4 +24,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return JSONResponse({"detail": "Rate limit exceeded"}, status_code=429)
         except Exception:
             logger.exception("Error checking rate limit")
+            if self.fail_closed:
+                return JSONResponse({"detail": "Rate limit error"}, status_code=429)
         return await call_next(request)

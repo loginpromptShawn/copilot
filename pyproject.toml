@@ -7,6 +7,14 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.111.0",
+  "pydantic>=2.8.0",
+  "uvicorn>=0.30.0",
+]
+
+[project.scripts]
+copilot = "copilot_app.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -16,3 +24,7 @@ where = ["src"]
 
 [tool.pytest]
 addopts = ["-q"]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py", "unit_*.py", "integration_*.py"]
+python_functions = ["test_*", "unit_*", "integration_*"]

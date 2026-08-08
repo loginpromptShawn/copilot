@@ -43,22 +43,25 @@ def system_metrics_collector(reg: MetricsRegistry | None = None) -> None:
         logger.exception("Failed collecting system metrics")
 
 
-def app_metrics_collector(reg: MetricsRegistry | None = None) -> None:
+def app_metrics_collector(reg: MetricsRegistry | None = None, plugin_manager=None) -> None:
     """Collect application metrics: number of users and plugins loaded."""
     registry = reg or global_metrics_registry
     try:
         # users count
         from ..persistence.repository import UserRepository
-        from ..plugins.plugin_manager import PluginManager
 
         repo = UserRepository()
         users = len(repo.list_users())
         registry.set_gauge("app_users_count", users)
 
-        # plugins count: attempt to inspect installed dir
-        pm = PluginManager()
-        pm.load_plugins()
-        plugins_count = len(pm.active_plugins)
+        # plugins count: use provided plugin manager if available, otherwise count installed files
+        if plugin_manager is not None:
+            plugins_count = len(plugin_manager.active_plugins)
+        else:
+            from ..plugins.plugin_manager import PluginManager
+            pm = PluginManager()
+            pm.load_plugins()
+            plugins_count = len(pm.active_plugins)
         registry.set_gauge("app_plugins_count", plugins_count)
     except Exception:
         logger.exception("Failed collecting app metrics")

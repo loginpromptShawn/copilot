@@ -1,4 +1,4 @@
-# Add runtime dependencies here
-# Example:
-# fastapi==0.111.1
-# pydantic==2.8.0
+# Runtime dependencies
+fastapi>=0.111.0
+pydantic>=2.8.0
+uvicorn>=0.30.0

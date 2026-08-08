@@ -2,18 +2,52 @@
 
 A fresh Python project scaffold created for development with Microsoft Copilot.
 
-## macOS CLI Usage
+## API Server
 
-Run the Copilot CLI directly from `src/copilot_app`:
+Run the FastAPI server with uvicorn:
 
 ```bash
-python3 src/copilot_app/cli.py greet Shawn
+uvicorn copilot_app.api.routes:app --host 0.0.0.0 --port 8000
+```
+
+Or programmatically:
+
+```bash
+python3 -m uvicorn copilot_app.api.routes:app --reload
+```
+
+The server exposes:
+- `POST /auth/register` — register a new user
+- `POST /auth/login` — authenticate and get a bearer token
+- `GET /auth/me` — get current user info
+- `GET /users` — list users (requires auth)
+- `POST /users` — create a user (requires auth)
+- `GET /system-info` — get latest system info (requires auth)
+- `POST /system-info` — save system info (requires auth)
+- `GET /metrics` — Prometheus metrics
+- `GET /traces` — list all traces
+- `GET /traces/{trace_id}` — get a single trace
+- `GET /mesh/greet/{name}` — mesh-routed greeting
+- `GET /mesh/sysinfo` — mesh-routed system info
+
+## macOS CLI Usage
+
+Run the Copilot CLI:
+
+```bash
+python3 -m copilot_app.cli.cli greet Shawn
+```
+
+Or via the package entry point:
+
+```bash
+python3 -m copilot_app.main greet Shawn
 ```
 
 To print version information:
 
 ```bash
-python3 src/copilot_app/cli.py --version
+python3 -m copilot_app.cli.cli --version
 ```
 
 ## Logging and Configuration
@@ -22,7 +56,7 @@ This project loads configuration from `config.ini` at the repository root and in
 
 - `config.ini` contains application settings and macOS-friendly paths.
 - `logs/copilot.log` stores rotating log files created automatically by the CLI.
-- If `config.ini` is missing, default values are used, including `/Users/bong/VSCode/copilot/data` for `data_dir`.
+- If `config.ini` is missing, default values are used, including `~/copilot/data` for `data_dir`.
 
 Edit `config.ini` to change the app name, environment, or data directory.
 
@@ -80,7 +114,7 @@ Async services live in `src/copilot_app/services/` as `async_user_service.py` an
 
 This project includes a lightweight background job scheduler under `src/copilot_app/scheduler`.
 
-- `cleanup_logs()` — runs every hour to rotate/prune large log files under `/Users/bong/VSCode/copilot/logs`.
+- `cleanup_logs()` — runs every hour to rotate/prune large log files under the configured log directory (defaults to `~/copilot/logs`).
 - `snapshot_system_info()` — runs every 5 minutes to record macOS system info to the database.
 
 The scheduler uses a background thread and runs as soon as the application starts. It can be queried via the CLI command `scheduler-status` which reports `running` or `stopped`.
@@ -129,7 +163,7 @@ On macOS, install `psutil` for better system metrics: `pip install psutil`.
 
 This project includes a simple SQLite persistence layer under `src/copilot_app/persistence`.
 
-- Database file: `/Users/bong/VSCode/copilot/copilot.db`
+- Database file: configured via `[paths] data_dir` in `config.ini` (defaults to `~/copilot.db`)
 - `database.py` provides `get_connection()` and `init_db()` to initialize tables.
 - `models.py` defines `User` and `SystemInfo` dataclasses.
 - `repository.py` provides `UserRepository` and `SystemInfoRepository` for CRUD operations.
@@ -139,7 +173,7 @@ Repositories are used by services to persist application data. The database is i
 To inspect the database on macOS, you can run:
 
 ```bash
-sqlite3 /Users/bong/VSCode/copilot/copilot.db 
+sqlite3 ~/copilot.db
 ```
 
 ## Authentication
@@ -193,7 +227,7 @@ This project includes a lightweight distributed tracing system under `src/copilo
 
 - `Span` (`span.py`): dataclass representing a trace span with `trace_id`, `span_id`, `parent_id`, `name`, timestamps, and attributes.
 - `Tracer` (`tracer.py`): in-memory tracer that records spans and supports nested spans and thread-local span stacks.
-- `TraceExporter` (`exporters.py`): exports traces to JSON files at `/Users/bong/VSCode/copilot/traces/` and exposes a FastAPI endpoint to view traces.
+- `TraceExporter` (`exporters.py`): exports traces to JSON files at the configured trace directory (defaults to `~/copilot/traces/`) and exposes a FastAPI endpoint to view traces.
 - `instrumentation` (`instrumentation.py`): provides `@trace_function(name=None)` decorator and `trace_block(name)` context manager for easy instrumentation.
 
 How spans work:
@@ -206,7 +240,7 @@ Viewing traces:
 
 - CLI: run `traces` via the CLI to print collected traces (JSON).
 - API: the FastAPI app mounts tracing endpoints; `GET /traces` returns all traces and `GET /traces/{trace_id}` returns a single trace.
-- Filesystem: JSON trace files are written to `/Users/bong/VSCode/copilot/traces/` (macOS path).
+- Filesystem: JSON trace files are written to the configured trace directory (defaults to `~/copilot/traces/`).
 
 ## Rate Limiting
 

@@ -2,8 +2,15 @@ import asyncio
 
 import pytest
 
+from copilot_app.persistence.database import init_db
 from copilot_app.services.async_user_service import greet_user, store_user
 from copilot_app.services.async_system_service import get_system_info, store_system_info
+
+
+@pytest.fixture(autouse=True)
+def setup_db(temp_db):
+    init_db()
+    yield
 
 
 @pytest.mark.asyncio

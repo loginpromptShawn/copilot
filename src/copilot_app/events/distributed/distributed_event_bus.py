@@ -7,7 +7,7 @@ from ..event_bus import EventBus
 from .transport import Transport, InMemoryTransport
 from .serializers import serialize_event, deserialize_event
 from ..event_types import UserCreatedEvent, SystemInfoUpdatedEvent, LogCleanupEvent
-from ...tracing.tracer import global_tracer
+from ...tracing import tracer as tracer_module
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class DistributedEventBus:
 
     def publish(self, event: Any) -> None:
         # publish locally first
-        tracer = global_tracer
+        tracer = tracer_module.global_tracer
         pub_span = None
         if tracer is not None:
             try:
@@ -63,7 +63,7 @@ class DistributedEventBus:
 
         def _on_message(msg: str) -> None:
             try:
-                tracer = global_tracer
+                tracer = tracer_module.global_tracer
                 msg_span = None
                 if tracer is not None:
                     try:

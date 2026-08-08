@@ -6,14 +6,14 @@ from copilot_app.rate_limit.rate_limiter import RateLimiter, global_rate_limiter
 from copilot_app.api.routes import app as api_app
 
 
-def test_token_bucket_basic():
+def integration_token_bucket_basic():
     tb = TokenBucketStrategy(capacity=2, refill_rate=0)
     assert tb.consume() is True
     assert tb.consume() is True
     assert tb.consume() is False
 
 
-def test_fixed_window():
+def integration_fixed_window():
     fw = FixedWindowStrategy(window_size=1, max_requests=2)
     assert fw.allow() is True
     assert fw.allow() is True
@@ -22,7 +22,7 @@ def test_fixed_window():
     assert fw.allow() is True
 
 
-def test_sliding_window():
+def integration_sliding_window():
     sw = SlidingWindowStrategy(window_size=1, max_requests=2)
     assert sw.allow() is True
     assert sw.allow() is True
@@ -31,7 +31,7 @@ def test_sliding_window():
     assert sw.allow() is True
 
 
-def test_middleware_rate_limit():
+def integration_middleware_rate_limit():
     # set a global limiter with capacity 1 and no refill
     rl = RateLimiter(strategy=TokenBucketStrategy(capacity=1, refill_rate=0))
     import importlib
@@ -46,7 +46,7 @@ def test_middleware_rate_limit():
     assert r2.status_code == 429
 
 
-def test_cli_rate_limit_command():
+def integration_cli_rate_limit_command():
     rl = RateLimiter(strategy=TokenBucketStrategy(capacity=2, refill_rate=0))
     import importlib
 

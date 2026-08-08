@@ -6,7 +6,7 @@ from copilot_app.events.distributed.distributed_event_bus import DistributedEven
 from copilot_app.events.event_types import UserCreatedEvent
 
 
-def test_serialize_deserialize():
+def integration_serialize_deserialize():
     evt = UserCreatedEvent(user_id=1, name="A")
     js = serialize_event(evt)
     obj = deserialize_event(js)
@@ -14,7 +14,7 @@ def test_serialize_deserialize():
     assert obj.user_id == 1
 
 
-def test_inmemory_transport_publish_subscribe():
+def integration_inmemory_transport_publish_subscribe():
     transport = InMemoryTransport()
     received = []
 
@@ -26,7 +26,7 @@ def test_inmemory_transport_publish_subscribe():
     assert received == ["hello"]
 
 
-def test_distributed_bus_roundtrip():
+def integration_distributed_bus_roundtrip():
     transport = InMemoryTransport()
     bus = DistributedEventBus(transport=transport)
     received = []

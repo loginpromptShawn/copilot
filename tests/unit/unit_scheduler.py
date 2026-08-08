@@ -6,7 +6,7 @@ import pytest
 from copilot_app.scheduler.scheduler import BackgroundScheduler
 
 
-def test_start_stop_scheduler():
+def unit_start_stop_scheduler():
     s = BackgroundScheduler(custom_jobs=[])
     s.start()
     assert s.is_running is True
@@ -16,7 +16,7 @@ def test_start_stop_scheduler():
     assert s.is_running is False
 
 
-def test_jobs_run(monkeypatch):
+def unit_jobs_run(monkeypatch):
     calls = {"a": 0, "b": 0}
 
     def job_a():

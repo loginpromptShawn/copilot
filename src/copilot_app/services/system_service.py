@@ -1,3 +1,4 @@
+from pathlib import Path
 import platform
 
 from ..persistence.repository import SystemInfoRepository
@@ -32,7 +33,7 @@ def get_system_info() -> str:
     return (
         f"System: {os_name} {version}\n"
         f"Platform: {platform.platform()}\n"
-        "Home: /Users/bong\n"
+        f"Home: {Path.home()}\n"
         f"Saved id: {info.id}"
     )
 

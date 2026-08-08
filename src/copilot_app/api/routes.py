@@ -1,22 +1,21 @@
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from pydantic import BaseModel
+from fastapi import Depends, FastAPI, HTTPException, Request
+from pydantic import BaseModel, Field
 from ..metrics.exporters import metrics_endpoint
 from ..tracing.exporters import router as traces_router
-from ..tracing.tracer import global_tracer
+from ..tracing import tracer as tracer_module
 from ..rate_limit.middleware import RateLimitMiddleware
 from ..mesh.mesh_router import MeshRouter
 from ..mesh.mesh_control_plane import global_mesh_control_plane
-from ..auth.service import AuthService
 from ..auth.middleware import AuthMiddleware, get_current_user
+from ..auth.service import AuthService
+
+auth_service = AuthService()
 from ..persistence.repository import UserRepository, SystemInfoRepository
-from ..circuit_breaker.integration import wrap_service_call
-from ..core.errors import CircuitOpenError
+from ..core.errors import AuthError, CircuitOpenError
 
 app = FastAPI()
 
 app.add_middleware(AuthMiddleware)
-
-auth_service = AuthService()
 
 
 class AuthRequest(BaseModel):
@@ -35,12 +34,12 @@ class CurrentUserResponse(BaseModel):
 
 
 class CreateUserRequest(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=100)
 
 
 class CreateSystemInfoRequest(BaseModel):
-    os: str
-    version: str
+    os: str = Field(min_length=1, max_length=50)
+    version: str = Field(min_length=1, max_length=50)
 
 
 @app.post("/auth/register", response_model=CurrentUserResponse)
@@ -48,7 +47,7 @@ async def auth_register(payload: AuthRequest):
     try:
         user = auth_service.register_user(payload.username, payload.password)
         return CurrentUserResponse(id=user.id, username=user.username, is_active=user.is_active)
-    except ValueError as exc:
+    except AuthError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
 
@@ -57,7 +56,7 @@ async def auth_login(payload: AuthRequest):
     try:
         session = auth_service.authenticate(payload.username, payload.password)
         return TokenResponse(token=session.token)
-    except ValueError:
+    except AuthError:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
@@ -108,37 +107,43 @@ if traces_router is not None:
 # add rate limit middleware
 app.add_middleware(RateLimitMiddleware)
 
-@app.get("/mesh/greet/{name}")
+class MeshResponse(BaseModel):
+    result: str | None = None
+    error: str | None = None
+    state: str | None = None
+
+
+@app.get("/mesh/greet/{name}", response_model=MeshResponse)
 async def mesh_greet(name: str):
     if global_mesh_control_plane is None:
-        return {"error": "Mesh control plane unavailable"}
+        return MeshResponse(error="Mesh control plane unavailable")
     router = MeshRouter()
     try:
         result = router.load_balanced_call("user-service", "greet_user", name)
-        return {"result": result}
+        return MeshResponse(result=result)
     except CircuitOpenError as exc:
-        return {"error": str(exc), "state": "OPEN"}
+        return MeshResponse(error=str(exc), state="OPEN")
     except Exception as exc:
-        return {"error": str(exc)}
+        return MeshResponse(error=str(exc))
 
 
-@app.get("/mesh/sysinfo")
+@app.get("/mesh/sysinfo", response_model=MeshResponse)
 async def mesh_sysinfo():
     if global_mesh_control_plane is None:
-        return {"error": "Mesh control plane unavailable"}
+        return MeshResponse(error="Mesh control plane unavailable")
     router = MeshRouter()
     try:
         result = router.load_balanced_call("system-service", "get_system_info")
-        return {"result": result}
+        return MeshResponse(result=result)
     except CircuitOpenError as exc:
-        return {"error": str(exc), "state": "OPEN"}
+        return MeshResponse(error=str(exc), state="OPEN")
     except Exception as exc:
-        return {"error": str(exc)}
+        return MeshResponse(error=str(exc))
 
 
 @app.middleware("http")
 async def trace_requests(request: Request, call_next):
-    tracer = global_tracer
+    tracer = tracer_module.global_tracer
     span = None
     if tracer is not None:
         try:

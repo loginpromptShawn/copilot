@@ -9,6 +9,12 @@ class CommandNotFoundError(AppError):
         self.command = command
 
 
+class AuthError(AppError):
+    """Raised when an authentication error occurs."""
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
 class RateLimitExceededError(AppError):
     """Raised when a rate limit blocks an operation."""
     def __init__(self, identifier: str):

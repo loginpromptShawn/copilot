@@ -12,10 +12,12 @@ from copilot_app.tracing.instrumentation import trace_function, trace_block
 
 def setup_function(fn):
     # reset global tracer
-    global_tracer = None
+    import importlib
+    tr_mod = importlib.import_module("copilot_app.tracing.tracer")
+    tr_mod.global_tracer = None
 
 
-def test_span_creation_and_finish(tmp_path):
+def unit_span_creation_and_finish(tmp_path):
     tracer = Tracer()
     # set module-level global_tracer
     import importlib
@@ -31,7 +33,7 @@ def test_span_creation_and_finish(tmp_path):
     assert span.trace_id in traces
 
 
-def test_nested_spans():
+def unit_nested_spans():
     tracer = Tracer()
     import importlib
 
@@ -46,7 +48,7 @@ def test_nested_spans():
     assert child.trace_id == parent.trace_id
 
 
-def test_exporter_writes_trace_file(tmp_path):
+def unit_exporter_writes_trace_file(tmp_path):
     tracer = Tracer()
     import importlib
 
@@ -63,7 +65,7 @@ def test_exporter_writes_trace_file(tmp_path):
     assert TRACE_DIR.exists()
 
 
-def test_instrumentation_decorator_records_span():
+def unit_instrumentation_decorator_records_span():
     tracer = Tracer()
     import importlib
 

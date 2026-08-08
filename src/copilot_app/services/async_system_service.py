@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import platform
+from pathlib import Path
 from typing import Any
 
 from ..persistence.repository import SystemInfoRepository
@@ -15,7 +16,7 @@ async def get_system_info(*args: Any, app_context: dict | None = None) -> str:
     return (
         f"System: {os_name} {version}\n"
         f"Platform: {platform.platform()}\n"
-        "Home: /Users/bong\n"
+        f"Home: {Path.home()}\n"
         f"Saved id: {info.id}"
     )
 

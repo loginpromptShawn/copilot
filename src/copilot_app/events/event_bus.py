@@ -4,7 +4,7 @@ import logging
 import threading
 from collections import defaultdict
 from typing import Callable, Dict, List, Type, Any
-from ..tracing.tracer import global_tracer
+from ..tracing import tracer as tracer_module
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class EventBus:
         self._lock = threading.Lock()
 
     def subscribe(self, event_type: Type[Any], handler: Callable[[Any], None]) -> None:
-        tracer = global_tracer
+        tracer = tracer_module.global_tracer
         span = None
         if tracer is not None:
             try:
@@ -33,7 +33,7 @@ class EventBus:
                 logger.exception("Failed to finish subscribe span")
 
     def unsubscribe(self, event_type: Type[Any], handler: Callable[[Any], None]) -> None:
-        tracer = global_tracer
+        tracer = tracer_module.global_tracer
         span = None
         if tracer is not None:
             try:
@@ -52,8 +52,8 @@ class EventBus:
 
     def publish(self, event: Any) -> None:
         etype = type(event)
-        logger.info("Publishing event %s: %s", etype.__name__, event)
-        tracer = global_tracer
+        logger.debug("Publishing event %s: %s", etype.__name__, event)
+        tracer = tracer_module.global_tracer
         pub_span = None
         if tracer is not None:
             try:
@@ -73,7 +73,7 @@ class EventBus:
                     logger.exception("Failed to start handler span")
             try:
                 h(event)
-            except Exception:
+            except Exception as exc:
                 logger.exception("Error in event handler %s for event %s", h, etype)
             finally:
                 if tracer is not None and handler_span is not None:

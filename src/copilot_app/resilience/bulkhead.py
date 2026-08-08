@@ -7,15 +7,9 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from ..core.errors import AppError
+from ..core.errors import BulkheadRejectedError
 
 logger = logging.getLogger(__name__)
-
-
-class BulkheadRejectedError(AppError):
-    def __init__(self, name: str):
-        super().__init__(f"Bulkhead rejected call for: {name}")
-        self.name = name
 
 
 @dataclass
@@ -47,8 +41,6 @@ class Bulkhead:
                 self._active += 1
                 logger.info("Bulkhead %s dequeued a request; active=%s queued=%s", self.name, self._active, len(self._queue))
                 threading.Thread(target=self._execute_thread, args=(fn, args, kwargs), daemon=True).start()
-            elif self._queue:
-                self._queue.appendleft((fn, args, kwargs))
 
     def _execute_thread(self, fn: Callable[..., Any], args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
         try:

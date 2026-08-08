@@ -14,7 +14,28 @@ from ..tracing.instrumentation import trace_block
 logger = logging.getLogger(__name__)
 
 
-LOG_DIR = Path("/Users/bong/VSCode/copilot/logs")
+def _default_log_dir() -> Path:
+    try:
+        from ..utils.config import get_config
+        config = get_config()
+        if config.has_section("paths") and config.has_option("paths", "data_dir"):
+            return Path(config.get("paths", "data_dir")).parent / "logs"
+    except Exception:
+        pass
+    return Path.home() / "copilot" / "logs"
+
+def _default_log_rotation_bytes() -> int:
+    try:
+        from ..utils.config import get_config
+        config = get_config()
+        if config.has_section("paths") and config.has_option("paths", "log_rotation_bytes"):
+            return config.getint("paths", "log_rotation_bytes")
+    except Exception:
+        pass
+    return 5 * 1024 * 1024  # 5MB default
+
+LOG_DIR = _default_log_dir()
+LOG_ROTATION_BYTES = _default_log_rotation_bytes()
 
 
 def cleanup_logs() -> None:
@@ -25,7 +46,7 @@ def cleanup_logs() -> None:
             # simple prune: remove files older than a threshold (not implemented here)
             # For demo, compress large logs (placeholder logic)
             for p in LOG_DIR.glob("*.log"):
-                if p.stat().st_size > 5 * 1024 * 1024:
+                if p.stat().st_size > LOG_ROTATION_BYTES:
                     dest = p.with_suffix(p.suffix + ".old")
                     shutil.move(str(p), str(dest))
                     logger.info("Rotated log %s to %s", p, dest)

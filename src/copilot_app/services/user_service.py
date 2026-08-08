@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from ..persistence.repository import UserRepository
 from ..events.event_types import UserCreatedEvent
 from ..events.event_bus import global_event_bus
@@ -27,7 +29,7 @@ def greet_user(name: str) -> str:
     except Exception:
         # don't fail on event publish
         pass
-    return f"Hello, {user.name} from macOS! Your home directory is /Users/bong."
+    return f"Hello, {user.name} from macOS! Your home directory is {Path.home()}."
 
 
 def greet_user_mesh(name: str) -> str:

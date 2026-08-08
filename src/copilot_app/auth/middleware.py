@@ -10,8 +10,6 @@ from .models import AuthUser
 
 logger = logging.getLogger(__name__)
 
-auth_service = AuthService()
-
 
 def _extract_token(token: Optional[str], authorization: Optional[str]) -> Optional[str]:
     if authorization:
@@ -22,14 +20,19 @@ def _extract_token(token: Optional[str], authorization: Optional[str]) -> Option
 
 
 def get_current_user(
+    request: Request,
     token: Optional[str] = Header(None),
     authorization: Optional[str] = Header(None, alias="Authorization"),
 ) -> AuthUser:
+    # If AuthMiddleware already validated the token, reuse the cached user
+    cached = getattr(request.state, "user", None)
+    if cached is not None:
+        return cached
     candidate = _extract_token(token, authorization)
     if not candidate:
         logger.debug("Missing auth token")
         raise HTTPException(status_code=401, detail="Unauthorized")
-    user = auth_service.validate_token(candidate)
+    user = AuthService().validate_token(candidate)
     if user is None:
         logger.debug("Invalid auth token")
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -37,9 +40,9 @@ def get_current_user(
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app):
+    def __init__(self, app, auth_service: Optional[AuthService] = None):
         super().__init__(app)
-        self.auth_service = auth_service
+        self.auth_service = auth_service or AuthService()
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
         if request.url.path.startswith("/auth") or request.url.path.startswith("/metrics") or request.method == "OPTIONS":

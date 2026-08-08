@@ -3,7 +3,7 @@ from copilot_app.metrics.collectors import system_metrics_collector, app_metrics
 from copilot_app.metrics.exporters import MetricsExporter
 
 
-def test_metrics_registry_basic():
+def unit_metrics_registry_basic():
     reg = MetricsRegistry()
     reg.increment_counter("test_counter")
     reg.increment_counter("test_counter")
@@ -18,7 +18,7 @@ def test_metrics_registry_basic():
     assert "test_hist_count" in out
 
 
-def test_collectors_run(tmp_path):
+def unit_collectors_run(tmp_path):
     # ensure collectors run without error
     reg = MetricsRegistry()
     system_metrics_collector(reg)

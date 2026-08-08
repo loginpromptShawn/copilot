@@ -11,17 +11,28 @@ except ImportError:  # pragma: no cover
     APIRouter = None  # type: ignore
     HTTPException = Exception  # type: ignore
 
-from .tracer import Tracer, global_tracer
+from .tracer import Tracer
+from . import tracer as tracer_module
 
 logger = logging.getLogger(__name__)
 
-TRACE_DIR = Path("/Users/bong/VSCode/copilot/traces")
+def _default_trace_dir() -> Path:
+    try:
+        from ..utils.config import get_config
+        config = get_config()
+        if config.has_section("paths") and config.has_option("paths", "data_dir"):
+            return Path(config.get("paths", "data_dir")).parent / "traces"
+    except Exception:
+        pass
+    return Path.home() / "copilot" / "traces"
+
+TRACE_DIR = _default_trace_dir()
 TRACE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class TraceExporter:
     def __init__(self, tracer: Tracer | None = None) -> None:
-        self.tracer = tracer or global_tracer
+        self.tracer = tracer or tracer_module.global_tracer
 
     def export_all(self) -> List[Dict[str, Any]]:
         if self.tracer is None:

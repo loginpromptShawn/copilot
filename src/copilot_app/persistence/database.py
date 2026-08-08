@@ -1,7 +1,18 @@
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path("/Users/bong/VSCode/copilot/copilot.db")
+# Use config-based path with fallback to home directory
+def _default_db_path() -> Path:
+    try:
+        from ..utils.config import get_config
+        config = get_config()
+        if config.has_section("paths") and config.has_option("paths", "data_dir"):
+            return Path(config.get("paths", "data_dir")) / "copilot.db"
+    except Exception:
+        pass
+    return Path.home() / "copilot.db"
+
+DB_PATH = _default_db_path()
 
 
 def get_connection() -> sqlite3.Connection:

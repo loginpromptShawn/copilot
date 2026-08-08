@@ -1,6 +1,5 @@
 import time
 import threading
-from pathlib import Path
 
 import pytest
 
@@ -8,21 +7,11 @@ from copilot_app.resilience.bulkhead import Bulkhead, BulkheadRejectedError
 from copilot_app.resilience.integration import get_bulkhead, get_retry_policy, resilient_call
 from copilot_app.resilience.retry import RetryExecutor, RetryPolicy
 from copilot_app.circuit_breaker.integration import get_breaker_for_service, reset_breakers
+from copilot_app.circuit_breaker.policies import CircuitState
 from copilot_app.core.errors import CircuitOpenError
 
-DB = Path("/Users/bong/VSCode/copilot/copilot.db")
 
-
-@pytest.fixture(autouse=True)
-def cleanup_db():
-    if DB.exists():
-        DB.unlink()
-    yield
-    if DB.exists():
-        DB.unlink()
-
-
-def test_retry_fixed_strategy():
+def integration_retry_fixed_strategy():
     policy = RetryPolicy(max_attempts=3, backoff_strategy="fixed", base_delay=0.01, max_delay=0.05)
     executor = RetryExecutor(policy)
     calls = {"count": 0}
@@ -37,7 +26,7 @@ def test_retry_fixed_strategy():
     assert calls["count"] == 1
 
 
-def test_retry_exponential_strategy():
+def integration_retry_exponential_strategy():
     policy = RetryPolicy(max_attempts=2, backoff_strategy="exponential", base_delay=0.01, max_delay=0.05)
     executor = RetryExecutor(policy)
     calls = {"count": 0}
@@ -51,7 +40,7 @@ def test_retry_exponential_strategy():
     assert executor.execute(fail_once) == "ok"
 
 
-def test_retry_jitter_strategy():
+def integration_retry_jitter_strategy():
     policy = RetryPolicy(max_attempts=2, backoff_strategy="jitter", base_delay=0.01, max_delay=0.05)
     executor = RetryExecutor(policy)
 
@@ -64,7 +53,7 @@ def test_retry_jitter_strategy():
     assert executor.execute(fail_once) == "ok"
 
 
-def test_bulkhead_rejects_when_full():
+def integration_bulkhead_rejects_when_full():
     bulkhead = Bulkhead(name="test", max_concurrent=1, queue_size=1)
     start = threading.Event()
     end = threading.Event()
@@ -91,19 +80,19 @@ def test_bulkhead_rejects_when_full():
     t2.join()
 
 
-def test_circuit_open_skips_retries():
+def integration_circuit_open_skips_retries():
     reset_breakers()
     breaker = get_breaker_for_service("user-service")
     for _ in range(breaker.policy.failure_threshold):
         with pytest.raises(RuntimeError):
             breaker.call(lambda: (_ for _ in ()).throw(RuntimeError("fail")))
 
-    assert breaker.state == breaker.policy.failure_threshold and breaker.state == breaker.state or breaker.state == breaker.state
+    assert breaker.state == CircuitState.OPEN
     with pytest.raises(CircuitOpenError):
         resilient_call("user-service", "fail", lambda: "ok")
 
 
-def test_mesh_router_uses_resilience():
+def integration_mesh_router_uses_resilience():
     from copilot_app.mesh.mesh_router import MeshRouter
 
     reset_breakers()

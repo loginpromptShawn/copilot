@@ -35,19 +35,17 @@ def main(argv=None) -> int:
         print("copilot 0.1.0 (macOS CLI)")
         return 0
 
-    # Now that we know logging level, boot the app
-    app = load_cli_environment(quiet=quiet)
-
-    CommandRegistry.initialize()
-    CommandRegistry.populate_default_commands()
-
     if args.command is None:
         parser.print_help()
         return 1
 
+    # Lazy app initialization: only boot the full app when a real command is given
+    app = load_cli_environment(quiet=quiet)
+
     command = args.command
     raw_args = args.args or []
     cmd_args = [arg for arg in raw_args if arg != "--"]
+
     cmd_obj = CommandRegistry.get(command)
     if cmd_obj is None:
         print(f"Unknown command: {command}")

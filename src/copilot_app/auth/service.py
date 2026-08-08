@@ -2,6 +2,7 @@ import logging
 import time
 from typing import Optional
 
+from ..core.errors import AuthError
 from ..persistence.database import get_connection
 from ..utils.config import get_config
 from .models import AuthUser, AuthSession
@@ -126,7 +127,7 @@ class AuthService:
         repo = AuthRepository()
         if repo.get_user_by_username(username) is not None:
             logger.warning("Attempted to register duplicate username: %s", username)
-            raise ValueError("User already exists")
+            raise AuthError("User already exists")
         password_hash = hash_password(password, algorithm=self.password_hash_algorithm)
         user = repo.create_user(username=username, password_hash=password_hash, is_active=True)
         logger.info("Registered user %s", username)
@@ -137,10 +138,10 @@ class AuthService:
         user = repo.get_user_by_username(username)
         if user is None or not user.is_active:
             logger.warning("Authentication failed for username: %s", username)
-            raise ValueError("Invalid credentials")
+            raise AuthError("Invalid credentials")
         if not verify_password(password, user.password_hash, algorithm=self.password_hash_algorithm):
             logger.warning("Authentication failed for username: %s", username)
-            raise ValueError("Invalid credentials")
+            raise AuthError("Invalid credentials")
         token = generate_token()
         expires_at = token_expiry(self.token_expiry_hours)
         session = repo.create_session(user.id, token, expires_at)

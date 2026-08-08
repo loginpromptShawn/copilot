@@ -9,14 +9,15 @@ from typing import Any, Dict, List
 from .mesh_node import MeshNode
 from .mesh_observability import record_mesh_call, record_mesh_error
 from ..resilience.integration import resilient_call
-from ..tracing.tracer import global_tracer
+from ..tracing import tracer as tracer_module
 
 logger = logging.getLogger(__name__)
 
 
 class MeshRouter:
-    def __init__(self) -> None:
+    def __init__(self, control_plane=None) -> None:
         self._counters: Dict[str, int] = defaultdict(int)
+        self._control_plane = control_plane
 
     def _choose_node(self, service_name: str, nodes: List[MeshNode]) -> MeshNode | None:
         if not nodes:
@@ -26,7 +27,7 @@ class MeshRouter:
         return nodes[index]
 
     def load_balanced_call(self, service_name: str, operation: str, *args: Any, **kwargs: Any) -> Any:
-        tracer = global_tracer
+        tracer = tracer_module.global_tracer
         span = None
         if tracer is not None:
             try:
@@ -35,7 +36,9 @@ class MeshRouter:
                 pass
         start = time.time()
         try:
-            control_plane = importlib.import_module("copilot_app.mesh.mesh_control_plane").global_mesh_control_plane
+            control_plane = self._control_plane
+            if control_plane is None:
+                control_plane = importlib.import_module("copilot_app.mesh.mesh_control_plane").global_mesh_control_plane
             if control_plane is None:
                 raise RuntimeError("Mesh control plane not initialized")
             nodes = control_plane.get_nodes(service_name)
@@ -61,7 +64,7 @@ class MeshRouter:
                     pass
 
     def direct_call(self, node_id: str, operation: str, *args: Any, **kwargs: Any) -> Any:
-        tracer = global_tracer
+        tracer = tracer_module.global_tracer
         span = None
         if tracer is not None:
             try:
@@ -70,7 +73,9 @@ class MeshRouter:
                 pass
         start = time.time()
         try:
-            control_plane = importlib.import_module("copilot_app.mesh.mesh_control_plane").global_mesh_control_plane
+            control_plane = self._control_plane
+            if control_plane is None:
+                control_plane = importlib.import_module("copilot_app.mesh.mesh_control_plane").global_mesh_control_plane
             if control_plane is None:
                 raise RuntimeError("Mesh control plane not initialized")
             node = control_plane.get_node(node_id)

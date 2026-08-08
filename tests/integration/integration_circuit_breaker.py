@@ -8,7 +8,7 @@ from copilot_app.circuit_breaker.policies import CircuitPolicy, CircuitState
 from copilot_app.core.errors import CircuitOpenError
 
 
-def test_closed_to_open_transition():
+def integration_closed_to_open_transition():
     breaker = CircuitBreaker(policy=CircuitPolicy(failure_threshold=2, recovery_timeout=1.0, half_open_max_calls=1))
 
     def failing():
@@ -24,7 +24,7 @@ def test_closed_to_open_transition():
     assert breaker.failure_count >= 2
 
 
-def test_open_to_half_open_after_timeout():
+def integration_open_to_half_open_after_timeout():
     breaker = CircuitBreaker(policy=CircuitPolicy(failure_threshold=1, recovery_timeout=0.1, half_open_max_calls=1))
 
     def failing():
@@ -39,7 +39,7 @@ def test_open_to_half_open_after_timeout():
     assert breaker.state == CircuitState.HALF_OPEN
 
 
-def test_half_open_success_to_closed():
+def integration_half_open_success_to_closed():
     breaker = CircuitBreaker(policy=CircuitPolicy(failure_threshold=1, recovery_timeout=0.1, half_open_max_calls=1))
 
     def failing():
@@ -58,7 +58,7 @@ def test_half_open_success_to_closed():
     assert breaker.state == CircuitState.CLOSED
 
 
-def test_half_open_failure_returns_open():
+def integration_half_open_failure_returns_open():
     breaker = CircuitBreaker(policy=CircuitPolicy(failure_threshold=1, recovery_timeout=0.1, half_open_max_calls=1))
 
     def failing():
@@ -75,7 +75,7 @@ def test_half_open_failure_returns_open():
     assert breaker.state == CircuitState.OPEN
 
 
-def test_integration_with_wrap_service_call():
+def integration_integration_with_wrap_service_call():
     service_name = "user-service"
     def success():
         return "hello"
@@ -86,13 +86,13 @@ def test_integration_with_wrap_service_call():
     assert service_name in breakers
 
 
-def test_get_breaker_for_service_registry():
+def integration_get_breaker_for_service_registry():
     breaker = get_breaker_for_service("system-service")
     assert breaker is get_breaker_for_service("system-service")
     assert breaker.state == CircuitState.CLOSED
 
 
-def test_circuit_open_error_raised_when_blocked():
+def integration_circuit_open_error_raised_when_blocked():
     breaker = get_breaker_for_service("test-service")
     breaker.policy.failure_threshold = 1
     breaker.policy.recovery_timeout = 0.1

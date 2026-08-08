@@ -3,15 +3,15 @@ import pathlib
 from copilot_app.plugins.plugin_manager import PluginManager
 
 
-def test_load_plugins():
-    base = pathlib.Path(__file__).resolve().parents[1] / "src" / "copilot_app" / "plugins" / "installed"
+def integration_load_plugins():
+    base = pathlib.Path(__file__).resolve().parents[2] / "src" / "copilot_app" / "plugins" / "installed"
     pm = PluginManager(installed_dir=base)
     pm.load_plugins()
     assert "example" in pm.active_plugins
 
 
-def test_activate_deactivate_plugins():
-    base = pathlib.Path(__file__).resolve().parents[1] / "src" / "copilot_app" / "plugins" / "installed"
+def integration_activate_deactivate_plugins():
+    base = pathlib.Path(__file__).resolve().parents[2] / "src" / "copilot_app" / "plugins" / "installed"
     pm = PluginManager(installed_dir=base)
     pm.load_plugins()
     app_context = {"app": None, "config": None}
@@ -23,8 +23,8 @@ def test_activate_deactivate_plugins():
     assert getattr(plugin, "activated", False) is False
 
 
-def test_get_plugin_metadata():
-    base = pathlib.Path(__file__).resolve().parents[1] / "src" / "copilot_app" / "plugins" / "installed"
+def integration_get_plugin_metadata():
+    base = pathlib.Path(__file__).resolve().parents[2] / "src" / "copilot_app" / "plugins" / "installed"
     pm = PluginManager(installed_dir=base)
     pm.load_plugins()
     p = pm.get_plugin("example")
